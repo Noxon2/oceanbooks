@@ -145,5 +145,6 @@ def upload_book():
         return jsonify({"error": str(e)}), 500
 
 
-# ✅ For Render — Do not use app.run(), just expose app
-app = app
+# ✅ For Render
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=10000)
