@@ -1,11 +1,11 @@
-from flask import Flask, request, jsonify, send_file, send_from_directory, render_template
+from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 import sqlite3
 import os
 import uuid
 
-app = Flask(__name__, static_folder='uploads', template_folder='.')
-CORS(app)
+app = Flask(__name__, static_folder='uploads')
+CORS(app, origins=["https://oceanbooks.vercel.app", "http://localhost:5000"])
 
 # --------------------------
 # Database Connection Helper
@@ -17,11 +17,11 @@ def get_db_connection():
 
 
 # --------------------------
-# Home Route
+# ✅ Home Route (Fixed)
 # --------------------------
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return jsonify({"message": "OceanBooks API is running!"})
 
 
 # --------------------------
@@ -66,21 +66,17 @@ def upload_book():
     if not title or not author or not category or not book_file or not thumbnail:
         return jsonify({"error": "Missing required fields"}), 400
 
-    # Ensure upload folders exist
     os.makedirs('uploads/books', exist_ok=True)
     os.makedirs('uploads/thumbnails', exist_ok=True)
 
-    # Generate unique filenames
     book_filename = f"{uuid.uuid4().hex}_{book_file.filename}"
     thumb_filename = f"{uuid.uuid4().hex}_{thumbnail.filename}"
 
-    # Save files
     book_path = os.path.join('uploads/books', book_filename)
     thumb_path = os.path.join('uploads/thumbnails', thumb_filename)
     book_file.save(book_path)
     thumbnail.save(thumb_path)
 
-    # Save to DB
     conn = get_db_connection()
     conn.execute('INSERT INTO books (title, author, category, description, file_path, thumbnail_path, downloads, upload_date) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
                  (title, author, category, description, book_path, thumb_path, 0))
@@ -102,7 +98,6 @@ def download_book(book_id):
     if not book:
         return jsonify({"error": "Book not found"}), 404
 
-    # Update download count
     conn = get_db_connection()
     conn.execute('UPDATE books SET downloads = downloads + 1 WHERE id = ?', (book_id,))
     conn.commit()
@@ -165,7 +160,7 @@ def admin_stats():
 
 
 # --------------------------
-# ✅ Admin Login (Added)
+# ✅ Admin Login Route
 # --------------------------
 @app.route('/api/admin/login', methods=['POST'])
 def admin_login():
@@ -197,7 +192,7 @@ def uploaded_files(filename):
 
 
 # --------------------------
-# Run the App
+# Run App
 # --------------------------
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
